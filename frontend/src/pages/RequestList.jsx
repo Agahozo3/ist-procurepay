@@ -1,57 +1,126 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Button from "../components/Button";
+import { Eye, Edit } from "lucide-react";
 
-const RequestList = () => {
+export default function StaffRequestList({ user }) {
   const navigate = useNavigate();
+  const currentUser = user || { username: "Staff User", role: "Staff" };
+
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
+    // TODO: Fetch requests from backend
     setRequests([
-      { id: 1, title: "Laptop Purchase", description: "Office laptop", amount: 1200, status: "PENDING" },
-      { id: 2, title: "Stationery", description: "Pens and notebooks", amount: 50, status: "APPROVED" },
-      { id: 3, title: "Software Subscription", description: "Annual license", amount: 300, status: "REJECTED" },
+      {
+        id: 1,
+        title: "Laptop Purchase",
+        description: "Buy a new laptop for development",
+        amount: "$1200",
+        status: "PENDING",
+        proforma: "laptop_proforma.pdf",
+        createdBy: "Staff A",
+        createdAt: "2025-11-20",
+      },
+      {
+        id: 2,
+        title: "Printer Ink",
+        description: "Buy ink cartridges for office printer",
+        amount: "$80",
+        status: "APPROVED",
+        proforma: "ink_proforma.pdf",
+        createdBy: "Staff B",
+        createdAt: "2025-11-18",
+      },
+      {
+        id: 3,
+        title: "Office Chairs",
+        description: "Buy 5 ergonomic chairs for staff",
+        amount: "$500",
+        status: "REJECTED",
+        proforma: "chairs_proforma.pdf",
+        createdBy: "Staff C",
+        createdAt: "2025-11-15",
+      },
     ]);
   }, []);
 
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Purchase Requests</h2>
+  const handleEdit = (id) => {
+    navigate(`/request/edit/${id}`);
+  };
 
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto border-collapse border border-gray-300 min-w-[600px]">
+  const handleView = (id) => {
+    navigate(`/request/view/${id}`);
+  };
+
+  return (
+    <div className="p-6 min-h-screen bg-blue-50">
+      <h1 className="text-2xl font-bold mb-6 text-center">My Requests</h1>
+
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-200 overflow-x-auto">
+        <table className="min-w-full text-left">
           <thead className="bg-gray-100">
             <tr>
-              <th className="border p-2 text-left">ID</th>
-              <th className="border p-2 text-left">Title</th>
-              <th className="border p-2 text-left">Description</th>
-              <th className="border p-2 text-left">Amount (USD)</th>
-              <th className="border p-2 text-left">Status</th>
-              <th className="border p-2 text-left">Actions</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Title</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Description</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Amount</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Status</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Proforma</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Created By</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700">Created At</th>
+              <th className="px-4 py-2 text-sm font-semibold text-gray-700 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {requests.map((req) => (
-              <tr key={req.id} className="hover:bg-gray-50">
-                <td className="border p-2">{req.id}</td>
-                <td className="border p-2">{req.title}</td>
-                <td className="border p-2">{req.description}</td>
-                <td className="border p-2">{req.amount}</td>
-                <td className="border p-2">
+
+          <tbody className="divide-y divide-gray-200">
+            {requests.map((r) => (
+              <tr key={r.id}>
+                <td className="px-4 py-2">{r.title}</td>
+                <td className="px-4 py-2">{r.description}</td>
+                <td className="px-4 py-2">{r.amount}</td>
+                <td className="px-4 py-2">
                   <span
                     className={`px-2 py-1 rounded-full text-white ${
-                      req.status === "PENDING"
+                      r.status === "PENDING"
                         ? "bg-yellow-500"
-                        : req.status === "APPROVED"
+                        : r.status === "APPROVED"
                         ? "bg-green-500"
                         : "bg-red-500"
                     }`}
                   >
-                    {req.status}
+                    {r.status}
                   </span>
                 </td>
-                <td className="border p-2 flex flex-wrap gap-2">
-                  <Button className="bg-blue-500 hover:bg-blue-600 w-auto px-3" onClick={() => navigate(`/requests/${req.id}`)}>View</Button>
+                <td className="px-4 py-2">
+                  {r.proforma ? (
+                    <a
+                      href={`/${r.proforma}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      {r.proforma}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td className="px-4 py-2">{r.createdBy}</td>
+                <td className="px-4 py-2">{r.createdAt}</td>
+                <td className="px-4 py-2 flex justify-center gap-2">
+                  {r.status === "PENDING" && (
+                    <button
+                      className="text-orange-600 flex items-center gap-1"
+                      onClick={() => handleEdit(r.id)}
+                    >
+                      <Edit size={16} /> Edit
+                    </button>
+                  )}
+                  <button
+                    className="text-blue-600 flex items-center gap-1"
+                    onClick={() => handleView(r.id)}
+                  >
+                    <Eye size={16} /> View
+                  </button>
                 </td>
               </tr>
             ))}
@@ -60,6 +129,4 @@ const RequestList = () => {
       </div>
     </div>
   );
-};
-
-export default RequestList;
+}

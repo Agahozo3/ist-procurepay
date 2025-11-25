@@ -1,4 +1,4 @@
-
+import React from "react";
 import { User, Edit2 } from "lucide-react";
 
 export default function UserIcon() {
