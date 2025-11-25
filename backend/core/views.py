@@ -3,9 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
-from .models import User, Request  # your models
-from .serializers import UserSerializer, RequestSerializer  # your serializers
-
+from .models import User, Request
+from .serializers import UserSerializer, RequestSerializer
 
 # ------------------------
 # User Signup
@@ -45,14 +44,13 @@ class LoginView(APIView):
 
 
 # ------------------------
-# Get Current User
+# Current User
 # ------------------------
 class CurrentUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        return Response(UserSerializer(request.user).data)
 
 
 # ------------------------
@@ -62,11 +60,22 @@ class RequestListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        requests = Request.objects.all()
+        user = request.user
+        if user.role == 'staff':
+            requests = Request.objects.filter(created_by=user)
+        elif user.role == 'approver':
+            requests = Request.objects.filter(status='PENDING')
+        elif user.role == 'finance':
+            requests = Request.objects.filter(status='APPROVED')
+        else:
+            requests = Request.objects.none()
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
 
     def post(self, request):
+        if request.user.role != 'staff':
+            return Response({"error": "Only staff can create purchase requests"}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = RequestSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user)
@@ -75,59 +84,150 @@ class RequestListCreateView(APIView):
 
 
 # ------------------------
-# Request Detail
+# Request Detail / Update
 # ------------------------
 class RequestDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self, pk):
-        try:
-            return Request.objects.get(pk=pk)
-        except Request.DoesNotExist:
-            return None
+        return Request.objects.filter(pk=pk).first()
 
     def get(self, request, pk):
         request_obj = self.get_object(pk)
-        if request_obj:
-            serializer = RequestSerializer(request_obj)
-            return Response(serializer.data)
-        return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not request_obj:
+            return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(RequestSerializer(request_obj).data)
 
     def put(self, request, pk):
         request_obj = self.get_object(pk)
-        if request_obj:
-            serializer = RequestSerializer(request_obj, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save(created_by=request.user)
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not request_obj:
+            return Response({"error": "Not found"}, status=404)
+
+        if request.user.role != 'staff':
+            return Response({"error": "Only staff can update requests"}, status=403)
+
+        if request_obj.created_by != request.user:
+            return Response({"error": "You cannot modify this request"}, status=403)
+
+        if request_obj.status != 'PENDING':
+            return Response({"error": "Cannot update a reviewed request"}, status=400)
+
+        serializer = RequestSerializer(request_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
 
 # ------------------------
-# Approve / Reject Request
+# Approve Request
 # ------------------------
 class ApproveRequestView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, pk):
+    def patch(self, request, pk):
+        if request.user.role != 'approver':
+            return Response({"error": "Only approvers can approve requests"}, status=403)
+
         request_obj = Request.objects.filter(pk=pk).first()
-        if request_obj:
-            request_obj.status = "approved"
-            request_obj.save()
-            serializer = RequestSerializer(request_obj)
-            return Response(serializer.data)
-        return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not request_obj:
+            return Response({"error": "Request not found"}, status=404)
+
+        if request_obj.status != 'PENDING':
+            return Response({"error": "Request already reviewed"}, status=400)
+
+        # Approve request
+        request_obj.status = "APPROVED"
+        request_obj.approved_by = request.user
+
+        # Auto-generate purchase order file if proforma exists
+        if request_obj.proforma and not request_obj.purchase_order:
+            request_obj.purchase_order.name = f'purchase_orders/PO_{request_obj.pk}.pdf'
+
+        request_obj.save()
+        return Response(RequestSerializer(request_obj).data)
 
 
+# ------------------------
+# Finance Upload Receipt
+# ------------------------
+class UploadReceiptView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        if request.user.role != 'finance':
+            return Response({"error": "Only finance can upload receipt"}, status=403)
+
+        request_obj = Request.objects.filter(pk=pk, status='APPROVED').first()
+        if not request_obj:
+            return Response({"error": "Approved request not found"}, status=404)
+
+        if 'receipt' not in request.FILES:
+            return Response({"error": "No receipt file provided"}, status=400)
+
+        request_obj.receipt = request.FILES['receipt']
+        request_obj.save()
+        return Response(RequestSerializer(request_obj).data)
+
+
+# ------------------------
+# Reject Request
+# ------------------------
 class RejectRequestView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, pk):
+    def patch(self, request, pk):
+        if request.user.role != 'approver':
+            return Response({"error": "Only approvers can reject requests"}, status=403)
+
         request_obj = Request.objects.filter(pk=pk).first()
-        if request_obj:
-            request_obj.status = "rejected"
-            request_obj.save()
-            serializer = RequestSerializer(request_obj)
-            return Response(serializer.data)
-        return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not request_obj:
+            return Response({"error": "Request not found"}, status=404)
+
+        if request_obj.status != 'PENDING':
+            return Response({"error": "Request already reviewed"}, status=400)
+
+        request_obj.status = "REJECTED"
+        request_obj.approved_by = request.user
+        request_obj.save()
+        return Response(RequestSerializer(request_obj).data)
+
+
+# ------------------------
+# Filter Request List
+# ------------------------
+class FilteredRequestListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role == 'approver':
+            requests = Request.objects.filter(status='PENDING')
+        elif user.role == 'finance':
+            requests = Request.objects.filter(status='APPROVED')
+        else:
+            requests = Request.objects.none()
+        serializer = RequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+class UploadReceiptView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        if request.user.role != 'finance':
+            return Response({"error": "Only finance can upload receipt"}, status=403)
+
+        request_obj = Request.objects.filter(pk=pk).first()
+        if not request_obj:
+            return Response({"error": "Request not found"}, status=404)
+
+        if request_obj.status != 'APPROVED':
+            return Response({"error": "Only approved requests can have receipt uploaded"}, status=400)
+
+        receipt_file = request.FILES.get('receipt')
+        if not receipt_file:
+            return Response({"error": "No receipt file provided"}, status=400)
+
+        request_obj.receipt = receipt_file
+        request_obj.save()
+        return Response(RequestSerializer(request_obj).data)

@@ -2,8 +2,11 @@ from django.urls import path
 from .views import (
     SignupView, LoginView, CurrentUserView,
     RequestListCreateView, RequestDetailView,
-    ApproveRequestView, RejectRequestView
+    ApproveRequestView, RejectRequestView,
+    FilteredRequestListView,
+    UploadReceiptView
 )
+
 
 urlpatterns = [
     path("signup/", SignupView.as_view(), name="signup"),
@@ -13,4 +16,6 @@ urlpatterns = [
     path("requests/<int:pk>/", RequestDetailView.as_view(), name="request_detail"),
     path("requests/<int:pk>/approve/", ApproveRequestView.as_view(), name="request_approve"),
     path("requests/<int:pk>/reject/", RejectRequestView.as_view(), name="request_reject"),
+    path('requests/filtered/', FilteredRequestListView.as_view(), name='request-filtered'),
+    path('requests/<int:pk>/finance-upload/', UploadReceiptView.as_view(), name='finance-upload'), 
 ]
