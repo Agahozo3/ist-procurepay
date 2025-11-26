@@ -26,26 +26,19 @@ export default function RequestForm() {
     setSuccess("");
 
     try {
-      // Prepare form data
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
       formData.append("amount", amount);
       if (proformaFile) formData.append("proforma", proformaFile);
 
-      // Send to backend
       await createRequest(formData);
-
-      // Show success message
       setSuccess("Request created successfully!");
 
-      // Clear form
       setTitle("");
       setDescription("");
       setAmount("");
       setProformaFile(null);
-
-      // Redirect after 2 seconds
       setTimeout(() => {
         navigate("/staff/dashboard");
       }, 2000);

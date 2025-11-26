@@ -16,7 +16,6 @@ export default function EditRequest() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // Fetch request data from backend
     const fetchRequest = async () => {
       try {
         const data = await getRequest(id);
@@ -57,8 +56,6 @@ export default function EditRequest() {
       await updateRequest(id, formData);
 
       setSuccess("Request updated successfully!");
-
-      // Redirect to request list after showing success
       setTimeout(() => {
         navigate("/requests");
       }, 1500);

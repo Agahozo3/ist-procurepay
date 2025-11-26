@@ -9,25 +9,19 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Handle input changes
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Handle login
   const handleLogin = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const res = await apiLogin(form); // Expected: { user, token }
+      const res = await apiLogin(form); 
 
       if (!res.token) throw new Error("Token not received from server");
-
-      // Store token in localStorage
       localStorage.setItem("token", res.token);
-
-      // Role-based redirect
       const role = res.user.role.toLowerCase();
       switch (role) {
         case "staff":

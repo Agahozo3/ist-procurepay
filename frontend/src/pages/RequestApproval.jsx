@@ -8,8 +8,6 @@ export default function ApproverRequestDetail() {
   const [request, setRequest] = useState(null);
 
   useEffect(() => {
-    // TODO: Fetch request by ID from backend
-    // Example: GET /api/requests/:id
     setRequest({
       id,
       title: "Laptop Purchase",
@@ -27,19 +25,13 @@ export default function ApproverRequestDetail() {
   }, [id]);
 
   const handleApprove = () => {
-    // TODO: Call API to approve request
     console.log("Approve request:", request.id);
     setRequest({ ...request, status: "APPROVED" });
-    // Optionally navigate back to pending requests
-    // navigate("/approver/requests/pending");
   };
 
   const handleReject = () => {
-    // TODO: Call API to reject request
     console.log("Reject request:", request.id);
     setRequest({ ...request, status: "REJECTED" });
-    // Optionally navigate back to pending requests
-    // navigate("/approver/requests/pending");
   };
 
   if (!request) return <p className="text-center mt-6">Loading request...</p>;

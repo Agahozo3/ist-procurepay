@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, Edit } from "lucide-react";
 import { getRequests } from "../api/api";
+import Pagination from "../components/pagination"; 
 
 export default function RequestList({ user }) {
   const navigate = useNavigate();
@@ -10,15 +11,15 @@ export default function RequestList({ user }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const entriesPerPage = 10;
 
   useEffect(() => {
     const fetchRequests = async () => {
       setLoading(true);
       setError("");
       try {
-        const data = await getRequests(); // API returns snake_case fields
-
-        // Map backend fields to frontend-friendly camelCase
+        const data = await getRequests(); 
         const formatted = data.map((r) => ({
           id: r.id,
           title: r.title,
@@ -29,7 +30,6 @@ export default function RequestList({ user }) {
           createdBy: r.created_by,
           createdAt: r.created_at,
         }));
-
         setRequests(formatted);
       } catch (err) {
         console.error(err);
@@ -37,17 +37,15 @@ export default function RequestList({ user }) {
       }
       setLoading(false);
     };
-
     fetchRequests();
   }, []);
 
-  const handleEdit = (id) => {
-    navigate(`/request/edit/${id}`);
-  };
+  const handleEdit = (id) => navigate(`/request/edit/${id}`);
+  const handleView = (id) => navigate(`/request/view/${id}`);
 
-  const handleView = (id) => {
-    navigate(`/request/view/${id}`);
-  };
+  const indexOfLast = currentPage * entriesPerPage;
+  const indexOfFirst = indexOfLast - entriesPerPage;
+  const currentRequests = requests.slice(indexOfFirst, indexOfLast);
 
   return (
     <div className="p-6 min-h-screen bg-blue-50">
@@ -72,7 +70,7 @@ export default function RequestList({ user }) {
           </thead>
 
           <tbody className="divide-y divide-gray-200">
-            {requests.map((r) => (
+            {currentRequests.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-2">{r.title}</td>
                 <td className="px-4 py-2">{r.description}</td>
@@ -136,6 +134,14 @@ export default function RequestList({ user }) {
             )}
           </tbody>
         </table>
+        {requests.length > entriesPerPage && (
+          <Pagination
+            entriesPerPage={entriesPerPage}
+            totalEntries={requests.length}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
+        )}
       </div>
     </div>
   );

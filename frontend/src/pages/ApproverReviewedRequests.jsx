@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { getReviewedRequests } from "../api/api";
+import Pagination from "../components/pagination"; 
 
 export default function ApproverReviewedRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const entriesPerPage = 10;
 
   useEffect(() => {
     const fetchReviewedRequests = async () => {
@@ -20,6 +23,11 @@ export default function ApproverReviewedRequests() {
 
     fetchReviewedRequests();
   }, []);
+
+  // Pagination logic
+  const indexOfLast = currentPage * entriesPerPage;
+  const indexOfFirst = indexOfLast - entriesPerPage;
+  const currentRequests = requests.slice(indexOfFirst, indexOfLast);
 
   if (loading)
     return <p className="text-center mt-4">Loading reviewed requests...</p>;
@@ -47,8 +55,9 @@ export default function ApproverReviewedRequests() {
                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Created At</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-200">
-              {requests.map((req) => (
+              {currentRequests.map((req) => (
                 <tr key={req.id}>
                   <td className="px-4 py-2">{req.title}</td>
                   <td className="px-4 py-2">{req.description}</td>
@@ -96,6 +105,16 @@ export default function ApproverReviewedRequests() {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination Component */}
+          {requests.length > entriesPerPage && (
+            <Pagination
+              entriesPerPage={entriesPerPage}
+              totalEntries={requests.length}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
+          )}
         </div>
       )}
     </div>

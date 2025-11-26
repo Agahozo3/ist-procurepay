@@ -16,7 +16,6 @@ export default function ViewRequest() {
       setLoading(true);
       setError("");
 
-      // Check if token exists
       const token = localStorage.getItem("token");
       if (!token) {
         setError("You are not authorized. Please log in.");
@@ -36,10 +35,9 @@ export default function ViewRequest() {
       } catch (err) {
         console.error("Axios error:", err.response || err);
         if (err.response) {
-          // Error returned by backend
           if (err.response.status === 401) {
             setError("Unauthorized. Please log in again.");
-            navigate("/login"); // redirect to login
+            navigate("/login");
           } else if (err.response.status === 404) {
             setError("Request not found.");
           } else {

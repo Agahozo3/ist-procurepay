@@ -140,11 +140,9 @@ class ApproveRequestView(APIView):
         if request_obj.status != 'PENDING':
             return Response({"error": "Request already reviewed"}, status=400)
 
-        # Approve request
         request_obj.status = "APPROVED"
         request_obj.approved_by = request.user
 
-        # Auto-generate purchase order PDF if proforma exists
         if request_obj.proforma and not request_obj.purchase_order:
             buffer = BytesIO()
             p = canvas.Canvas(buffer)
@@ -157,8 +155,6 @@ class ApproveRequestView(APIView):
             p.showPage()
             p.save()
             buffer.seek(0)
-
-            # Corrected: only save filename, let Django use upload_to folder
             file_name = f'PO_{request_obj.pk}.pdf'
             request_obj.purchase_order.save(file_name, ContentFile(buffer.read()), save=False)
             buffer.close()
@@ -254,7 +250,6 @@ class LogoutView(APIView):
         Deletes the current user's token so they are logged out.
         """
         try:
-            # Delete token
             request.user.auth_token.delete()
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

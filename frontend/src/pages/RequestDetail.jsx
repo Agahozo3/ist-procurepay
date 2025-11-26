@@ -7,7 +7,6 @@ const RequestDetail = () => {
   const [request, setRequest] = useState(null);
 
   useEffect(() => {
-    // TODO: Fetch request details from backend API using the id
     setRequest({
       id,
       title: "Laptop Purchase",

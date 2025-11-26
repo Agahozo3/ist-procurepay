@@ -19,9 +19,7 @@ export default function SignUp() {
     setError("");
 
     try {
-      // Call backend signup
       await signup({ username, email, password, role });
-      // Redirect to login page
       navigate("/");
     } catch (err) {
       console.error(err);

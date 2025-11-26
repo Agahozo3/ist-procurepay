@@ -25,10 +25,10 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'core',  # your app
+    'core',  
 ]
 
-AUTH_USER_MODEL = 'core.User'  # custom user model
+AUTH_USER_MODEL = 'core.User' 
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",

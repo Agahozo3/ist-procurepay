@@ -12,12 +12,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await loginApi({ username, password });
 
-      // Save token
+    
       if (res.token) {
         localStorage.setItem("token", res.token);
       }
 
-      // Save user
       if (res.user) {
         localStorage.setItem("user", JSON.stringify(res.user));
         setUser(res.user);

@@ -7,9 +7,9 @@ export default function UploadFile() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false); // for showing loading during upload
+  const [uploading, setUploading] = useState(false); 
 
-  // Fetch approved requests on mount
+
   useEffect(() => {
     const fetchRequests = async () => {
       try {
@@ -24,17 +24,15 @@ export default function UploadFile() {
     fetchRequests();
   }, []);
 
-  // Handle file selection
+  
   const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
-
-  // Handle receipt upload
   const handleUpload = async (id) => {
     if (!selectedFile) return alert("Please select a file first");
 
     setUploading(true);
 
     try {
-      const data = await uploadReceipt(id, selectedFile); // Correct function
+      const data = await uploadReceipt(id, selectedFile);
       setRequests((prev) =>
         prev.map((req) => (req.id === id ? { ...req, receipt: data.receipt } : req))
       );
@@ -86,8 +84,6 @@ export default function UploadFile() {
                     {req.status}
                   </span>
                 </td>
-
-                {/* Proforma */}
                 <td className="px-4 py-2">
                   {req.proforma ? (
                     <a
@@ -102,8 +98,6 @@ export default function UploadFile() {
                     "-"
                   )}
                 </td>
-
-                {/* Purchase Order */}
                 <td className="px-4 py-2">
                   {req.purchase_order ? (
                     <a
@@ -118,8 +112,6 @@ export default function UploadFile() {
                     "-"
                   )}
                 </td>
-
-                {/* Receipt */}
                 <td className="px-4 py-2">
                   {req.receipt ? (
                     <a
@@ -139,8 +131,6 @@ export default function UploadFile() {
 
                 <td className="px-4 py-2">{req.created_by}</td>
                 <td className="px-4 py-2">{new Date(req.created_at).toLocaleDateString()}</td>
-
-                {/* Actions */}
                 <td className="px-4 py-2">
                   {!req.receipt && (
                     <>
