@@ -26,7 +26,6 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(username, email, password, role='staff', **extra_fields)
 
-
 # ---------------------------
 # User Model
 # ---------------------------
@@ -51,23 +50,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-
-# -------------------------------
+# ---------------------------
 # Request Model
-# -------------------------------
+# ---------------------------
 class Request(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-        ('PAID', 'Paid'),  # New status after finance uploads receipt
+        ('PENDING', 'Pending'),              # Created by staff, awaiting approval
+        ('APPROVED', 'Approved'),            # Approved by approver
+        ('REJECTED', 'Rejected'),            # Rejected by approver
+        ('RECEIPT_UPLOADED', 'Receipt Uploaded'),  # Receipt uploaded by finance
+        ('PAID', 'Paid'),                    # Optional: validated/paid
     ]
 
     title = models.CharField(max_length=255)
     description = models.TextField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    
+
+    # Relationships
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -80,16 +80,24 @@ class Request(models.Model):
         blank=True,
         related_name='approved_requests'
     )
-    
-    # Files
+    finance_uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='finance_uploaded_requests'
+    )
+
+    # File uploads
     proforma = models.FileField(upload_to='proformas/', null=True, blank=True)
     purchase_order = models.FileField(upload_to='purchase_orders/', null=True, blank=True)
     receipt = models.FileField(upload_to='receipts/', null=True, blank=True)
-    
-    # Finance fields
+
+    # Optional finance notes
     payment_date = models.DateField(null=True, blank=True)
     payment_notes = models.TextField(blank=True, default="")
 
+    # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
