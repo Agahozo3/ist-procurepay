@@ -1,47 +1,44 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, Edit } from "lucide-react";
+import { getRequests } from "../api/api";
 
-export default function StaffRequestList({ user }) {
+export default function RequestList({ user }) {
   const navigate = useNavigate();
   const currentUser = user || { username: "Staff User", role: "Staff" };
 
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // TODO: Fetch requests from backend
-    setRequests([
-      {
-        id: 1,
-        title: "Laptop Purchase",
-        description: "Buy a new laptop for development",
-        amount: "$1200",
-        status: "PENDING",
-        proforma: "laptop_proforma.pdf",
-        createdBy: "Staff A",
-        createdAt: "2025-11-20",
-      },
-      {
-        id: 2,
-        title: "Printer Ink",
-        description: "Buy ink cartridges for office printer",
-        amount: "$80",
-        status: "APPROVED",
-        proforma: "ink_proforma.pdf",
-        createdBy: "Staff B",
-        createdAt: "2025-11-18",
-      },
-      {
-        id: 3,
-        title: "Office Chairs",
-        description: "Buy 5 ergonomic chairs for staff",
-        amount: "$500",
-        status: "REJECTED",
-        proforma: "chairs_proforma.pdf",
-        createdBy: "Staff C",
-        createdAt: "2025-11-15",
-      },
-    ]);
+    const fetchRequests = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await getRequests(); // API returns snake_case fields
+
+        // Map backend fields to frontend-friendly camelCase
+        const formatted = data.map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          amount: r.amount,
+          status: r.status,
+          proforma: r.proforma,
+          createdBy: r.created_by,
+          createdAt: r.created_at,
+        }));
+
+        setRequests(formatted);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to fetch requests. Please try again.");
+      }
+      setLoading(false);
+    };
+
+    fetchRequests();
   }, []);
 
   const handleEdit = (id) => {
@@ -55,6 +52,9 @@ export default function StaffRequestList({ user }) {
   return (
     <div className="p-6 min-h-screen bg-blue-50">
       <h1 className="text-2xl font-bold mb-6 text-center">My Requests</h1>
+
+      {loading && <p className="text-center text-gray-600 mb-4">Loading requests...</p>}
+      {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
       <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-200 overflow-x-auto">
         <table className="min-w-full text-left">
@@ -93,19 +93,21 @@ export default function StaffRequestList({ user }) {
                 <td className="px-4 py-2">
                   {r.proforma ? (
                     <a
-                      href={`/${r.proforma}`}
+                      href={r.proforma.startsWith("http") ? r.proforma : `/${r.proforma}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 underline hover:text-blue-800"
                     >
-                      {r.proforma}
+                      {r.proforma.split("/").pop()}
                     </a>
                   ) : (
                     "-"
                   )}
                 </td>
-                <td className="px-4 py-2">{r.createdBy}</td>
-                <td className="px-4 py-2">{r.createdAt}</td>
+                <td className="px-4 py-2">{r.createdBy || "-"}</td>
+                <td className="px-4 py-2">
+                  {r.createdAt ? new Date(r.createdAt).toLocaleString() : "-"}
+                </td>
                 <td className="px-4 py-2 flex justify-center gap-2">
                   {r.status === "PENDING" && (
                     <button
@@ -124,6 +126,14 @@ export default function StaffRequestList({ user }) {
                 </td>
               </tr>
             ))}
+
+            {!loading && requests.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">
+                  No requests found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

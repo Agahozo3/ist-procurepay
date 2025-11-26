@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import UserIcon from "../components/UserIcon";
 import Button from "../components/Button";
-import RequestCard from "../components/RequestCard";
+
 
 export default function ApproverDashboard({ user }) {
   const navigate = useNavigate();
@@ -30,12 +30,6 @@ export default function ApproverDashboard({ user }) {
             Request Approval
           </Button>
         </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <RequestCard title="Pending Requests" count={5} color="text-yellow-500" />
-        <RequestCard title="Approved Requests" count={8} color="text-green-500" />
-        <RequestCard title="Rejected Requests" count={2} color="text-red-500" />
       </div>
     </div>
   );

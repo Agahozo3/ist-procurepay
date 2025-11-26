@@ -55,11 +55,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 # ---------------------------
 class Request(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending'),              # Created by staff, awaiting approval
-        ('APPROVED', 'Approved'),            # Approved by approver
-        ('REJECTED', 'Rejected'),            # Rejected by approver
-        ('RECEIPT_UPLOADED', 'Receipt Uploaded'),  # Receipt uploaded by finance
-        ('PAID', 'Paid'),                    # Optional: validated/paid
+        ('PENDING', 'Pending'),              
+        ('APPROVED', 'Approved'),           
+        ('REJECTED', 'Rejected'),            
+        ('RECEIPT_UPLOADED', 'Receipt Uploaded'),  
+        ('PAID', 'Paid'),                    
     ]
 
     title = models.CharField(max_length=255)

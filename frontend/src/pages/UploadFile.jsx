@@ -1,73 +1,74 @@
 import React, { useEffect, useState } from "react";
+import { getFilteredRequests, uploadReceipt } from "../api/api.jsx";
 
-export default function UploadReceipt() {
+export default function UploadFile() {
   const [requests, setRequests] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false); // for showing loading during upload
 
+  // Fetch approved requests on mount
   useEffect(() => {
-    // TODO: Fetch approved requests from backend
-    setRequests([
-      {
-        id: 1,
-        title: "Laptop Purchase",
-        amount: 1200,
-        status: "APPROVED",
-        proforma: "laptop_proforma.pdf",
-        purchaseOrder: "PO-001.pdf",
-        receipt: null,
-        createdBy: "Staff A",
-        createdAt: "2025-11-24",
-      },
-      {
-        id: 2,
-        title: "Printer Ink",
-        amount: 80,
-        status: "APPROVED",
-        proforma: "ink_proforma.pdf",
-        purchaseOrder: "PO-002.pdf",
-        receipt: null,
-        createdBy: "Staff B",
-        createdAt: "2025-11-22",
-      },
-    ]);
+    const fetchRequests = async () => {
+      try {
+        const data = await getFilteredRequests("APPROVED");
+        setRequests(data);
+      } catch (err) {
+        console.error("Failed to fetch approved requests:", err);
+        setError("Failed to load requests.");
+      }
+      setLoading(false);
+    };
+    fetchRequests();
   }, []);
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
+  // Handle file selection
+  const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
 
-  const handleUpload = (id) => {
+  // Handle receipt upload
+  const handleUpload = async (id) => {
     if (!selectedFile) return alert("Please select a file first");
 
-    // TODO: Upload file to server and update the request record
-    setRequests((prev) =>
-      prev.map((req) =>
-        req.id === id ? { ...req, receipt: selectedFile.name } : req
-      )
-    );
-    setUploadingId(null);
-    setSelectedFile(null);
-    alert("Receipt uploaded successfully!");
+    setUploading(true);
+
+    try {
+      const data = await uploadReceipt(id, selectedFile); // Correct function
+      setRequests((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, receipt: data.receipt } : req))
+      );
+      alert("Receipt uploaded successfully!");
+      setUploadingId(null);
+      setSelectedFile(null);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Failed to upload receipt. Please try again.");
+    }
+
+    setUploading(false);
   };
+
+  if (loading) return <p className="text-center mt-4">Loading requests...</p>;
+  if (error) return <p className="text-center mt-4 text-red-500">{error}</p>;
 
   return (
     <div className="p-6 min-h-screen bg-blue-50">
       <h1 className="text-2xl font-bold mb-6 text-center">Upload Receipts</h1>
 
       <div className="bg-white p-6 rounded-xl shadow-lg border border-blue-200 overflow-x-auto">
-        <table className="w-full text-left min-w-max">
+        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2">Title</th>
-              <th className="px-4 py-2">Amount</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Proforma</th>
-              <th className="px-4 py-2">Purchase Order</th>
-              <th className="px-4 py-2">Receipt</th>
-              <th className="px-4 py-2">Created By</th>
-              <th className="px-4 py-2">Created At</th>
-              <th className="px-4 py-2">Actions</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Title</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Amount</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Status</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Proforma</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Purchase Order</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Receipt</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Created By</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Created At</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
 
@@ -85,43 +86,49 @@ export default function UploadReceipt() {
                     {req.status}
                   </span>
                 </td>
+
+                {/* Proforma */}
                 <td className="px-4 py-2">
                   {req.proforma ? (
                     <a
-                      href={`/${req.proforma}`}
-                      className="text-blue-600 underline hover:text-blue-800"
+                      href={`http://localhost:8000${req.proforma}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
                     >
-                      {req.proforma}
+                      View Proforma
                     </a>
                   ) : (
                     "-"
                   )}
                 </td>
+
+                {/* Purchase Order */}
                 <td className="px-4 py-2">
-                  {req.purchaseOrder ? (
+                  {req.purchase_order ? (
                     <a
-                      href={`/${req.purchaseOrder}`}
-                      className="text-blue-600 underline hover:text-blue-800"
+                      href={`http://localhost:8000${req.purchase_order}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
                     >
-                      {req.purchaseOrder}
+                      View PO
                     </a>
                   ) : (
                     "-"
                   )}
                 </td>
+
+                {/* Receipt */}
                 <td className="px-4 py-2">
                   {req.receipt ? (
                     <a
-                      href={`/${req.receipt}`}
-                      className="text-blue-600 underline hover:text-blue-800"
+                      href={`http://localhost:8000${req.receipt}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
                     >
-                      {req.receipt}
+                      View Receipt
                     </a>
                   ) : uploadingId === req.id ? (
                     <input type="file" onChange={handleFileChange} />
@@ -129,17 +136,23 @@ export default function UploadReceipt() {
                     "-"
                   )}
                 </td>
-                <td className="px-4 py-2">{req.createdBy}</td>
-                <td className="px-4 py-2">{req.createdAt}</td>
+
+                <td className="px-4 py-2">{req.created_by}</td>
+                <td className="px-4 py-2">{new Date(req.created_at).toLocaleDateString()}</td>
+
+                {/* Actions */}
                 <td className="px-4 py-2">
                   {!req.receipt && (
                     <>
                       {uploadingId === req.id ? (
                         <button
-                          className="bg-green-500 text-white px-3 py-1 rounded"
+                          className={`px-3 py-1 rounded text-white ${
+                            uploading ? "bg-gray-400 cursor-not-allowed" : "bg-green-500"
+                          }`}
                           onClick={() => handleUpload(req.id)}
+                          disabled={uploading}
                         >
-                          Upload
+                          {uploading ? "Uploading..." : "Upload"}
                         </button>
                       ) : (
                         <button

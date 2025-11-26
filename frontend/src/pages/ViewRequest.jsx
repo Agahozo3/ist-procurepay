@@ -1,30 +1,66 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import { getRequest } from "../api/api";
 
 export default function ViewRequest() {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-   
-    setRequest({
-      id,
-      title: "Laptop Purchase",
-      description: "Buy a new laptop for work",
-      amount: 1200,
-      status: "PENDING",
-      proformaFile: "laptop_quote.pdf",
-      createdBy: "Staff A",
-      createdAt: "2025-11-24",
-    });
-  }, [id]);
+    const fetchRequest = async () => {
+      setLoading(true);
+      setError("");
 
-  if (!request) {
-    return <p className="text-center mt-10">Loading request details...</p>;
-  }
+      // Check if token exists
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("You are not authorized. Please log in.");
+        setLoading(false);
+        return;
+      }
+
+      if (!id) {
+        setError("Invalid request ID.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getRequest(id);
+        setRequest(data);
+      } catch (err) {
+        console.error("Axios error:", err.response || err);
+        if (err.response) {
+          // Error returned by backend
+          if (err.response.status === 401) {
+            setError("Unauthorized. Please log in again.");
+            navigate("/login"); // redirect to login
+          } else if (err.response.status === 404) {
+            setError("Request not found.");
+          } else {
+            setError(err.response.data?.detail || "Failed to load request.");
+          }
+        } else {
+          setError("Network error. Please try again.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequest();
+  }, [id, navigate]);
+
+  if (loading)
+    return <p className="text-center mt-10 text-gray-600">Loading request details...</p>;
+
+  if (error)
+    return <p className="text-center mt-10 text-red-500">{error}</p>;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50 p-4">
@@ -59,14 +95,18 @@ export default function ViewRequest() {
           </p>
           <p>
             <strong>Proforma:</strong>{" "}
-            {request.proformaFile ? (
+            {request.proforma ? (
               <a
-                href={`/${request.proformaFile}`}
+                href={
+                  request.proforma.startsWith("http")
+                    ? request.proforma
+                    : `/${request.proforma}`
+                }
                 className="text-blue-600 underline hover:text-blue-800"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {request.proformaFile}
+                {request.proforma.split("/").pop()}
               </a>
             ) : (
               "-"
@@ -76,7 +116,8 @@ export default function ViewRequest() {
             <strong>Created By:</strong> {request.createdBy}
           </p>
           <p>
-            <strong>Created At:</strong> {request.createdAt}
+            <strong>Created At:</strong>{" "}
+            {new Date(request.createdAt).toLocaleDateString()}
           </p>
         </div>
 

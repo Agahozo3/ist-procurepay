@@ -1,48 +1,37 @@
 import React, { useEffect, useState } from "react";
+import { getReviewedRequests } from "../api/api";
 
 export default function ApproverReviewedRequests() {
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // TODO: Fetch reviewed requests for this approver from backend API
-    // Example:
-    // fetch("/api/requests?status=APPROVED,REJECTED&approverId=<currentUserId>")
-    //   .then(res => res.json())
-    //   .then(data => setRequests(data));
+    const fetchReviewedRequests = async () => {
+      try {
+        const data = await getReviewedRequests();
+        setRequests(data);
+      } catch (err) {
+        console.error("Failed to fetch reviewed requests:", err);
+        setError("Failed to load reviewed requests.");
+      }
+      setLoading(false);
+    };
 
-    // Dummy data for now
-    setRequests([
-      {
-        id: 1,
-        title: "Office Chairs",
-        description: "Buy 5 ergonomic chairs for staff",
-        amount: 600,
-        status: "APPROVED",
-        proforma: "chairs_proforma.pdf",
-        purchaseOrder: "PO-001.pdf", 
-        createdBy: "Alice Johnson",
-        createdAt: "2025-11-20",
-      },
-      {
-        id: 2,
-        title: "Projector",
-        description: "Purchase projector for conference room",
-        amount: 800,
-        status: "REJECTED",
-        proforma: "projector_quote.pdf",
-        purchaseOrder: null, 
-        createdBy: "Bob Smith",
-        createdAt: "2025-11-18",
-      },
-    ]);
+    fetchReviewedRequests();
   }, []);
+
+  if (loading)
+    return <p className="text-center mt-4">Loading reviewed requests...</p>;
+  if (error)
+    return <p className="text-center mt-4 text-red-500">{error}</p>;
 
   return (
     <div className="p-6 min-h-screen bg-blue-50">
       <h2 className="text-2xl font-bold mb-6 text-center">Reviewed Requests</h2>
 
       {requests.length === 0 ? (
-        <p className="text-center text-gray-600 mt-6">No reviewed requests yet</p>
+        <p className="text-center text-gray-600">No reviewed requests yet.</p>
       ) : (
         <div className="overflow-x-auto bg-white shadow rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">
@@ -67,31 +56,42 @@ export default function ApproverReviewedRequests() {
                   <td className="px-4 py-2">
                     <span
                       className={`px-2 py-1 rounded-full text-white ${
-                        req.status === "APPROVED"
-                          ? "bg-green-500"
-                          : "bg-red-500"
+                        req.status === "APPROVED" ? "bg-green-500" : "bg-red-500"
                       }`}
                     >
                       {req.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{req.proforma}</td>
                   <td className="px-4 py-2">
-                    {req.purchaseOrder ? (
+                    {req.proforma ? (
                       <a
-                        href={`/${req.purchaseOrder}`}
-                        className="text-blue-600 underline hover:text-blue-800"
+                        href={req.proforma}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
                       >
-                        {req.purchaseOrder}
+                        View Proforma
                       </a>
                     ) : (
                       "-"
                     )}
                   </td>
-                  <td className="px-4 py-2">{req.createdBy}</td>
-                  <td className="px-4 py-2">{req.createdAt}</td>
+                  <td className="px-4 py-2">
+                    {req.purchase_order ? (
+                      <a
+                        href={req.purchase_order}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View PO
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-4 py-2">{req.created_by}</td>
+                  <td className="px-4 py-2">{new Date(req.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

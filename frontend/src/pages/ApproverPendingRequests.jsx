@@ -1,56 +1,48 @@
 import React, { useEffect, useState } from "react";
 import Button from "../components/Button";
+import { getPendingRequests, approveRequest, rejectRequest } from "../api/api";
 
 export default function ApproverPendingApproval() {
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch pending requests for this approver from backend API
-    // Example:
-    // fetch("/api/requests?status=PENDING&approverLevel=1")
-    //   .then(res => res.json())
-    //   .then(data => setRequests(data));
-
-    // Dummy data for now
-    setRequests([
-      {
-        id: 1,
-        title: "Laptop Purchase",
-        description: "Purchase new laptops for dev team",
-        amount: 1200,
-        status: "PENDING",
-        proforma: "laptop_quote.pdf",
-        createdBy: "John Doe",
-        createdAt: "2025-11-23",
-      },
-      {
-        id: 2,
-        title: "Printer Ink",
-        description: "Refill ink for office printers",
-        amount: 150,
-        status: "PENDING",
-        proforma: "printer_ink.pdf",
-        createdBy: "Jane Smith",
-        createdAt: "2025-11-22",
-      },
-    ]);
+    const fetchRequests = async () => {
+      try {
+        const data = await getPendingRequests();
+        setRequests(data);
+      } catch (err) {
+        console.error("Error fetching pending requests:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
   }, []);
 
-  const handleApprove = (id) => {
-    // TODO: Call API to approve request
-    console.log("Approve request:", id);
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "APPROVED" } : r))
-    );
+  const handleApprove = async (id) => {
+    try {
+      await approveRequest(id);
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "APPROVED" } : r))
+      );
+    } catch (err) {
+      console.error("Failed to approve request:", err);
+    }
   };
 
-  const handleReject = (id) => {
-    // TODO: Call API to reject request
-    console.log("Reject request:", id);
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "REJECTED" } : r))
-    );
+  const handleReject = async (id) => {
+    try {
+      await rejectRequest(id);
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "REJECTED" } : r))
+      );
+    } catch (err) {
+      console.error("Failed to reject request:", err);
+    }
   };
+
+  if (loading) return <p className="text-center mt-10">Loading requests...</p>;
 
   return (
     <div className="p-6 min-h-screen bg-blue-50">
@@ -92,9 +84,22 @@ export default function ApproverPendingApproval() {
                       {req.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">{req.proforma}</td>
-                  <td className="px-4 py-2">{req.createdBy}</td>
-                  <td className="px-4 py-2">{req.createdAt}</td>
+                  <td className="px-4 py-2">
+                    {req.proforma ? (
+                      <a
+                        href={req.proforma.startsWith("http") ? req.proforma : `/${req.proforma}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline hover:text-blue-800"
+                      >
+                        {req.proforma.split("/").pop()}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-4 py-2">{req.created_by}</td>
+                  <td className="px-4 py-2">{new Date(req.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-2 flex gap-2 justify-center">
                     {req.status === "PENDING" && (
                       <>

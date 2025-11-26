@@ -1,42 +1,74 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
+import { updateRequest, getRequest } from "../api/api";
 
 export default function EditRequest() {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [proformaFile, setProformaFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // TODO: Fetch request data by ID from backend
-    // Example:
-    // fetch(`/api/requests/${id}`).then(res => res.json()).then(data => {
-    //   setTitle(data.title);
-    //   setDescription(data.description);
-    //   setAmount(data.amount);
-    //   setProformaFile(data.proformaFile);
-    // });
-
-    // Dummy data for now
-    setTitle("Laptop Purchase");
-    setDescription("Buy a new laptop for work");
-    setAmount(1200);
+    // Fetch request data from backend
+    const fetchRequest = async () => {
+      try {
+        const data = await getRequest(id);
+        setTitle(data.title);
+        setDescription(data.description);
+        setAmount(data.amount);
+        setProformaFile(data.proforma || null);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load request details.");
+      }
+    };
+    fetchRequest();
   }, [id]);
 
   const handleFileChange = (e) => {
-    setProformaFile(e.target.files[0]);
+    if (e.target.files.length > 0) {
+      setProformaFile(e.target.files[0]);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Send updated request to backend
-    console.log({ id, title, description, amount, proformaFile });
-    alert("Request updated successfully!");
-    navigate("/staff/requests"); 
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("amount", Number(amount));
+
+      if (proformaFile instanceof File) {
+        formData.append("proforma", proformaFile);
+      }
+
+      await updateRequest(id, formData);
+
+      setSuccess("Request updated successfully!");
+
+      // Redirect to request list after showing success
+      setTimeout(() => {
+        navigate("/requests");
+      }, 1500);
+
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      setError(err.response?.data?.detail || "Failed to update request. Please check your inputs.");
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -45,6 +77,9 @@ export default function EditRequest() {
         <h2 className="text-3xl font-bold mb-6 text-center text-blue-800">
           Edit Request #{id}
         </h2>
+
+        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+        {success && <p className="text-green-600 mb-4 text-center">{success}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -87,7 +122,6 @@ export default function EditRequest() {
             <label className="block mb-2 font-medium text-gray-700">
               Upload Proforma / Quotation
             </label>
-
             <div className="flex items-center gap-4">
               <label
                 htmlFor="proforma-upload"
@@ -95,9 +129,12 @@ export default function EditRequest() {
               >
                 Choose File
               </label>
-              {proformaFile && <span className="text-gray-700 italic">{proformaFile.name}</span>}
+              {proformaFile && (
+                <span className="text-gray-700 italic">
+                  {proformaFile instanceof File ? proformaFile.name : proformaFile}
+                </span>
+              )}
             </div>
-
             <input
               id="proforma-upload"
               type="file"
@@ -107,8 +144,12 @@ export default function EditRequest() {
             />
           </div>
 
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium py-3 rounded-lg shadow-md transition">
-            Save Changes
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium py-3 rounded-lg shadow-md transition disabled:opacity-50"
+          >
+            {loading ? "Saving Changes..." : "Save Changes"}
           </Button>
         </form>
       </div>

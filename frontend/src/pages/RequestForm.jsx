@@ -1,28 +1,61 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import { createRequest } from "../api/api";
 
 export default function RequestForm() {
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [proformaFile, setProformaFile] = useState(null);
-  const [requestDate, setRequestDate] = useState("");
-  const [items, setItems] = useState([{ name: "", quantity: 1, price: "" }]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // TODO: Send form data to backend API
-    console.log({ title, description, amount, requestDate, items, proformaFile });
-  };
-
-   const handleFileChange = (e) => {
+  const handleFileChange = (e) => {
     if (e.target.files.length > 0) {
       setProformaFile(e.target.files[0]);
     }
   };
 
-  const addItem = () => setItems([...items, { name: "", quantity: 1, price: "" }]);
-  const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      // Prepare form data
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("amount", amount);
+      if (proformaFile) formData.append("proforma", proformaFile);
+
+      // Send to backend
+      await createRequest(formData);
+
+      // Show success message
+      setSuccess("Request created successfully!");
+
+      // Clear form
+      setTitle("");
+      setDescription("");
+      setAmount("");
+      setProformaFile(null);
+
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        navigate("/staff/dashboard");
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to create request. Please try again.");
+    }
+
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50 p-4">
@@ -30,6 +63,9 @@ export default function RequestForm() {
         <h2 className="text-3xl font-bold mb-6 text-center text-blue-800">
           Create Purchase Request
         </h2>
+
+        {error && <p className="text-center text-red-500 mb-4">{error}</p>}
+        {success && <p className="text-center text-green-600 mb-4">{success}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,6 +105,7 @@ export default function RequestForm() {
               required
             />
           </div>
+
           <div>
             <label className="block mb-2 font-medium text-gray-700">
               Upload Proforma / Quotation
@@ -81,9 +118,7 @@ export default function RequestForm() {
               >
                 Choose File
               </label>
-              {proformaFile && (
-                <span className="text-gray-700 italic">{proformaFile.name}</span>
-              )}
+              {proformaFile && <span className="text-gray-700 italic">{proformaFile.name}</span>}
             </div>
 
             <input
@@ -92,12 +127,15 @@ export default function RequestForm() {
               onChange={handleFileChange}
               accept=".pdf,.jpg,.png"
               className="hidden"
-              required
             />
           </div>
 
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium py-3 rounded-lg shadow-md transition">
-            Submit Request
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-medium py-3 rounded-lg shadow-md transition disabled:opacity-50"
+          >
+            {loading ? "Submitting..." : "Submit Request"}
           </Button>
         </form>
       </div>

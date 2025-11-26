@@ -2,19 +2,33 @@ import React, { useState } from "react";
 import { User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
+import { signup } from "../api/api"; // import API function
 
-export default function   SignUp() {
+export default function SignUp() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Call backend API to create user
-    console.log({ username, email, password, role });
-    navigate("/");
+    setLoading(true);
+    setError("");
+
+    try {
+      // Call backend signup
+      await signup({ username, email, password, role });
+      // Redirect to login page
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to create account. Please try again.");
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -29,6 +43,8 @@ export default function   SignUp() {
         <h2 className="text-center text-2xl font-semibold text-blue-400 mb-8">
           Create Account
         </h2>
+
+        {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -90,10 +106,24 @@ export default function   SignUp() {
             </select>
           </div>
 
-          <Button className="w-full bg-blue-400 hover:bg-blue-500 text-white text-lg font-medium py-3 rounded-lg shadow-md transition">
-            SIGN UP
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-400 hover:bg-blue-500 text-white text-lg font-medium py-3 rounded-lg shadow-md transition disabled:opacity-50"
+          >
+            {loading ? "Creating Account..." : "SIGN UP"}
           </Button>
         </form>
+
+        <p className="text-center text-sm text-gray-600 mt-4">
+          Already have an account?{" "}
+          <span
+            onClick={() => navigate("/")}
+            className="text-blue-400 font-medium cursor-pointer hover:underline"
+          >
+            Login
+          </span>
+        </p>
       </div>
     </div>
   );

@@ -3,6 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
+from django.core.files.base import ContentFile
+from io import BytesIO
+from reportlab.pdfgen import canvas
+
 from .models import User, Request
 from .serializers import UserSerializer, RequestSerializer
 
@@ -140,32 +144,25 @@ class ApproveRequestView(APIView):
         request_obj.status = "APPROVED"
         request_obj.approved_by = request.user
 
-        # Auto-generate purchase order file if proforma exists
+        # Auto-generate purchase order PDF if proforma exists
         if request_obj.proforma and not request_obj.purchase_order:
-            request_obj.purchase_order.name = f'purchase_orders/PO_{request_obj.pk}.pdf'
+            buffer = BytesIO()
+            p = canvas.Canvas(buffer)
+            p.drawString(100, 750, f"Purchase Order for Request #{request_obj.pk}")
+            p.drawString(100, 720, f"Title: {request_obj.title}")
+            p.drawString(100, 700, f"Description: {request_obj.description}")
+            p.drawString(100, 680, f"Amount: ${request_obj.amount}")
+            p.drawString(100, 660, f"Created By: {request_obj.created_by.username}")
+            p.drawString(100, 640, f"Approved By: {request_obj.approved_by.username}")
+            p.showPage()
+            p.save()
+            buffer.seek(0)
 
-        request_obj.save()
-        return Response(RequestSerializer(request_obj).data)
+            # Corrected: only save filename, let Django use upload_to folder
+            file_name = f'PO_{request_obj.pk}.pdf'
+            request_obj.purchase_order.save(file_name, ContentFile(buffer.read()), save=False)
+            buffer.close()
 
-
-# ------------------------
-# Finance Upload Receipt
-# ------------------------
-class UploadReceiptView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def patch(self, request, pk):
-        if request.user.role != 'finance':
-            return Response({"error": "Only finance can upload receipt"}, status=403)
-
-        request_obj = Request.objects.filter(pk=pk, status='APPROVED').first()
-        if not request_obj:
-            return Response({"error": "Approved request not found"}, status=404)
-
-        if 'receipt' not in request.FILES:
-            return Response({"error": "No receipt file provided"}, status=400)
-
-        request_obj.receipt = request.FILES['receipt']
         request_obj.save()
         return Response(RequestSerializer(request_obj).data)
 
@@ -194,7 +191,30 @@ class RejectRequestView(APIView):
 
 
 # ------------------------
-# Filter Request List
+# Finance Upload Receipt
+# ------------------------
+class UploadReceiptView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        if request.user.role != 'finance':
+            return Response({"error": "Only finance can upload receipt"}, status=403)
+
+        request_obj = Request.objects.filter(pk=pk, status='APPROVED').first()
+        if not request_obj:
+            return Response({"error": "Approved request not found"}, status=404)
+
+        receipt_file = request.FILES.get('receipt')
+        if not receipt_file:
+            return Response({"error": "No receipt file provided"}, status=400)
+
+        request_obj.receipt = receipt_file
+        request_obj.save()
+        return Response(RequestSerializer(request_obj).data)
+
+
+# ------------------------
+# Filtered Request List (Pending)
 # ------------------------
 class FilteredRequestListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -210,24 +230,33 @@ class FilteredRequestListView(APIView):
         serializer = RequestSerializer(requests, many=True)
         return Response(serializer.data)
 
-class UploadReceiptView(APIView):
+
+# ------------------------
+# Reviewed Request List (Approved or Rejected)
+# ------------------------
+class ReviewedRequestListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def patch(self, request, pk):
-        if request.user.role != 'finance':
-            return Response({"error": "Only finance can upload receipt"}, status=403)
+    def get(self, request):
+        requests = Request.objects.filter(status__in=['APPROVED', 'REJECTED'])
+        serializer = RequestSerializer(requests, many=True)
+        return Response(serializer.data)
+    
+    
+# ------------------------
+# User Logout
+# ------------------------
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-        request_obj = Request.objects.filter(pk=pk).first()
-        if not request_obj:
-            return Response({"error": "Request not found"}, status=404)
+    def post(self, request):
+        """
+        Deletes the current user's token so they are logged out.
+        """
+        try:
+            # Delete token
+            request.user.auth_token.delete()
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if request_obj.status != 'APPROVED':
-            return Response({"error": "Only approved requests can have receipt uploaded"}, status=400)
-
-        receipt_file = request.FILES.get('receipt')
-        if not receipt_file:
-            return Response({"error": "No receipt file provided"}, status=400)
-
-        request_obj.receipt = receipt_file
-        request_obj.save()
-        return Response(RequestSerializer(request_obj).data)
+        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
